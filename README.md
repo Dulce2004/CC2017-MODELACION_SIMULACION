@@ -1,4 +1,4 @@
-# Laboratorio 1
+# Laboratorio 2
 
 **Curso:** CC2017 - Modelación y Simulación
 
@@ -8,27 +8,22 @@
 - Nadissa Vela - 23764
 
 ## Descripcion general
-Este laboratorio implementa y analiza un modelo dinamico de adopcion usando ecuaciones diferenciales ordinarias (EDOs), con integracion numerica por Euler y Runge-Kutta de cuarto orden (RK4).
+Este laboratorio realiza un análisis de Monte Carlo para evaluar la probabilidad de estabilidad de un sistema de reorden. Se muestrean incertidumbres en parámetros clave, se calcula el parámetro de estabilidad $P=\alpha\cdot\tau$, y se interpreta la robustez del sistema respecto al umbral $\pi/2$.
 
 ## Contenido desarrollado
-1. Implementacion del sistema en Python:
-	- Definicion de parametros del modelo y condiciones iniciales.
-	- Funcion de derivadas para los stocks S, A y R.
-	- Implementacion manual de los metodos de Euler y RK4.
+1. Implementación Monte Carlo:
+	- Definición de distribuciones para `alpha` (uniforme) y `tau` (normal truncada).
+	- Generación de `N = 5000` muestras y cálculo de $P = \alpha\cdot\tau$.
 
-2. Corridas de simulacion y comparacion de metodos:
-	- Ejecucion de Euler con pasos dt = 1.0, 0.5 y 0.1.
-	- Ejecucion de RK4 con dt = 1.0.
-	- Comparacion del valor final A(T) para evaluar precision.
+2. Análisis estadístico y visual:
+	- Histograma del producto $\alpha\cdot\tau$ y sombreado de regiones estable/inestable según $\pi/2$.
+	- Cálculo de la probabilidad de estabilidad y su intervalo de confianza (95%).
 
-3. Verificacion de conservacion de la poblacion:
-	- Comprobacion numerica de la invariante S + A + R = N.
-	- Cuantificacion del error maximo de redondeo en punto flotante.
+3. Análisis de sensibilidad:
+	- Correlaciones entre `alpha`, `tau` y $P$ para identificar variables influyentes.
 
-4. Conclusiones:
-	- RK4 ofrece mayor precision que Euler con pasos de tiempo grandes.
-	- El tamano del paso influye directamente en el error numerico.
-	- La validacion de invariantes es clave para asegurar consistencia del modelo.
+4. Interpretación y conclusiones:
+	- Evaluación del margen de seguridad y robustez frente a incertidumbres.
 
 ## Archivo principal
-- Lab1.ipynb
+- Lab2.ipynb — Notebook del Laboratorio 2: Análisis de Monte Carlo para evaluar la probabilidad de estabilidad de un sistema de reorden. Incluye muestreo de parámetros (`alpha` uniforme, `tau` normal truncada), cálculo del parámetro de estabilidad $P=\alpha\cdot\tau$, visualización del histograma con el umbral $\pi/2$, cálculo de correlaciones y un intervalo de confianza para la proporción estable.
