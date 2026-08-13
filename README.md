@@ -1,4 +1,4 @@
-# Laboratorio 2
+# Laboratorio 3
 
 **Curso:** CC2017 - Modelación y Simulación
 
@@ -7,23 +7,67 @@
 - Javier Linares - 231135
 - Nadissa Vela - 23764
 
-## Descripcion general
-Este laboratorio realiza un análisis de Monte Carlo para evaluar la probabilidad de estabilidad de un sistema de reorden. Se muestrean incertidumbres en parámetros clave, se calcula el parámetro de estabilidad $P=\alpha\cdot\tau$, y se interpreta la robustez del sistema respecto al umbral $\pi/2$.
+## Descripción general
+Este laboratorio se centra en la modelación de la dinámica de contagio usando el modelo SIR, con enfoque en la calibración, comparación con datos observados y análisis de sensibilidad del parámetro de transmisión $\beta$. El trabajo incluye una simulación numérica del avance de una epidemia y una herramienta interactiva para explorar cómo cambian las métricas clave según la variación de parámetros.
 
-## Contenido desarrollado
-1. Implementación Monte Carlo:
-	- Definición de distribuciones para `alpha` (uniforme) y `tau` (normal truncada).
-	- Generación de `N = 5000` muestras y cálculo de $P = \alpha\cdot\tau$.
+## Archivos del proyecto
+- `Lab3.ipynb` — notebook principal con la implementación del modelo SIR, el método RK4, la calibración con datos reales y el análisis de sensibilidad.
+- `simulacion_sir.html` — visualización interactiva del modelo SIR con sliders para modificar $R_0$, $\gamma$ y la fracción inicial infectada.
 
-2. Análisis estadístico y visual:
-	- Histograma del producto $\alpha\cdot\tau$ y sombreado de regiones estable/inestable según $\pi/2$.
-	- Cálculo de la probabilidad de estabilidad y su intervalo de confianza (95%).
+## Contenido desarrollado en Lab3.ipynb
+1. Implementación del modelo SIR:
+   - Definición de la población total, infectados iniciales, recuperados iniciales y susceptibles iniciales.
+   - Ecuaciones diferenciales para $S(t)$, $I(t)$ y $R(t)$.
+   - Parámetros $\beta$ (transmisión) y $\gamma$ (recuperación).
 
-3. Análisis de sensibilidad:
-	- Correlaciones entre `alpha`, `tau` y $P$ para identificar variables influyentes.
+2. Simulación numérica con RK4:
+   - Implementación manual del método de Runge-Kutta de cuarto orden.
+   - Proyección diaria de la epidemia durante 28 días.
+   - Comparación con datos observados en los días 7, 14, 21 y 28.
 
-4. Interpretación y conclusiones:
-	- Evaluación del margen de seguridad y robustez frente a incertidumbres.
+3. Cálculo del error de calibración:
+   - Evaluación del ajuste del modelo mediante la suma de cuadrados del error (SCE).
+   - Interpretación de qué tan bien aproxima el modelo la realidad observada.
 
-## Archivo principal
-- Lab2.ipynb — Notebook del Laboratorio 2: Análisis de Monte Carlo para evaluar la probabilidad de estabilidad de un sistema de reorden. Incluye muestreo de parámetros (`alpha` uniforme, `tau` normal truncada), cálculo del parámetro de estabilidad $P=\alpha\cdot\tau$, visualización del histograma con el umbral $\pi/2$, cálculo de correlaciones y un intervalo de confianza para la proporción estable.
+4. Análisis de sensibilidad:
+   - Variación del parámetro $\beta$ en $\pm 20\%$.
+   - Evaluación del pico de infectados, el tiempo al pico y el tamaño final de la epidemia.
+   - Cálculo del cambio porcentual en el pico frente a la variación de $\beta$.
+
+5. Criterios teóricos aplicados:
+   - Relación entre $R_0$ y la respuesta del sistema.
+   - Uso del umbral de crecimiento/extinción de la epidemia.
+   - Validación cualitativa y cuantitativa del modelo.
+
+## Contenido desarrollado en simulacion_sir.html
+1. Simulador interactivo del modelo SIR:
+   - Control deslizante para $R_0$.
+   - Control deslizante para el período infeccioso $1/\gamma$.
+   - Control deslizante para la fracción inicial infectada $I(0)/N$.
+
+2. Visualización de resultados:
+   - Gráfica de susceptibles, infectados y recuperados a lo largo del tiempo.
+   - Línea de capacidad hospitalaria para contextualizar el pico de infectados.
+   - Métricas: valor actual de $R_0$, estado de crecimiento/extinción, umbral de inmunidad, pico máximo y tiempo al pico.
+
+3. Interpretación visual:
+   - Permite observar cómo cambian los resultados ante distintos supuestos epidemiológicos.
+   - Facilita la comprensión del impacto de la transmisión y la duración infecciosa en la propagación.
+
+## Cómo ejecutar Lab3.ipynb
+1. Abrir el archivo `Lab3.ipynb` en Jupyter Notebook o VS Code con soporte para notebooks.
+2. Asegurarse de tener instalado Python y las librerías necesarias, especialmente `numpy`.
+3. Ejecutar las celdas en orden desde la primera hasta la última.
+4. Se imprimirán los resultados de la simulación base y del análisis de sensibilidad.
+
+## Cómo ejecutar simulacion_sir.html
+1. Ubicar el archivo `simulacion_sir.html` en la carpeta del proyecto.
+2. Abrirlo en un navegador web (Chrome, Edge, Firefox, etc.).
+3. Ajustar los controles deslizantes para observar cómo cambia la dinámica de la epidemia.
+4. La gráfica y las métricas se actualizan automáticamente en tiempo real.
+
+## Requisitos
+- Python 3.x
+- Jupyter Notebook o VS Code con soporte de notebooks
+- Navegador web moderno para abrir `simulacion_sir.html`
+- Librería `numpy` para ejecutar el notebook
