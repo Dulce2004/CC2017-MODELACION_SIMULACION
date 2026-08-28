@@ -1,73 +1,59 @@
-# Laboratorio 3
+# Laboratorio 4
 
 **Curso:** CC2017 - Modelación y Simulación
 
-**Integrantes:** 
+**Integrantes:**
 - Dulce Ambrosio - 231143
 - Javier Linares - 231135
 - Nadissa Vela - 23764
 
 ## Descripción general
-Este laboratorio se centra en la modelación de la dinámica de contagio usando el modelo SIR, con enfoque en la calibración, comparación con datos observados y análisis de sensibilidad del parámetro de transmisión $\beta$. El trabajo incluye una simulación numérica del avance de una epidemia y una herramienta interactiva para explorar cómo cambian las métricas clave según la variación de parámetros.
+Este laboratorio se centra en la construcción de un modelo de simulación basado en agentes (ABM) en Mesa para evaluar si una política de bicicletas compartidas reduce la congestión vehicular en una cuadrícula urbana. El trabajo cubre la inicialización de agentes heterogéneos con una distribución normal multivariada, el diseño del scheduler y la comunicación por entorno.
 
 ## Archivos del proyecto
-- `Lab3.ipynb` — notebook principal con la implementación del modelo SIR, el método RK4, la calibración con datos reales y el análisis de sensibilidad.
-- `simulacion_sir.html` — visualización interactiva del modelo SIR con sliders para modificar $R_0$, $\gamma$ y la fracción inicial infectada.
+- `Lab4.ipynb` — notebook principal con la implementación del modelo ABM, las pruebas de verificación, el análisis estadístico de la política de bicicletas.
 
-## Contenido desarrollado en Lab3.ipynb
-1. Implementación del modelo SIR:
-   - Definición de la población total, infectados iniciales, recuperados iniciales y susceptibles iniciales.
-   - Ecuaciones diferenciales para $S(t)$, $I(t)$ y $R(t)$.
-   - Parámetros $\beta$ (transmisión) y $\gamma$ (recuperación).
+## Contenido desarrollado en Lab4.ipynb
 
-2. Simulación numérica con RK4:
-   - Implementación manual del método de Runge-Kutta de cuarto orden.
-   - Proyección diaria de la epidemia durante 28 días.
-   - Comparación con datos observados en los días 7, 14, 21 y 28.
+1. Infraestructura del modelo ABM:
+   - Definición de dos tipos de agentes: `CommutterAgent` (persona que se desplaza) y `VehicleAgent` (vehículo asociado).
+   - Cuadrícula `MultiGrid` de 20×20 celdas que permite la coexistencia de una persona y su vehículo.
+   - Scheduler `RandomActivation` (asíncrono aleatorio), justificado por la naturaleza descentralizada de la movilidad urbana.
 
-3. Cálculo del error de calibración:
-   - Evaluación del ajuste del modelo mediante la suma de cuadrados del error (SCE).
-   - Interpretación de qué tan bien aproxima el modelo la realidad observada.
+2. Inicialización de agentes heterogéneos (Task 1.1):
+   - Generación de $N=150$ agentes con ingreso y distancia correlacionados mediante una distribución normal multivariada.
+   - Descomposición de Cholesky de la matriz de covarianza $\Sigma$ para muestrear atributos correlacionados.
+   - Regla determinista de elección de modo de transporte (bicicleta vs. automóvil) según distancia y política activa.
 
-4. Análisis de sensibilidad:
-   - Variación del parámetro $\beta$ en $\pm 20\%$.
-   - Evaluación del pico de infectados, el tiempo al pico y el tamaño final de la epidemia.
-   - Cálculo del cambio porcentual en el pico frente a la variación de $\beta$.
+3. Movilidad, comunicación y eliminación (Task 1.2):
+   - Movimiento por el camino Manhattan más corto, con espera si la celda objetivo está ocupada.
+   - Variable de entorno `congestion_map` que actúa como comunicación por entorno entre agentes.
+   - Eliminación del agente y su vehículo al llegar al destino.
 
-5. Criterios teóricos aplicados:
-   - Relación entre $R_0$ y la respuesta del sistema.
-   - Uso del umbral de crecimiento/extinción de la epidemia.
-   - Validación cualitativa y cuantitativa del modelo.
+4. Pruebas de verificación (Task 1.3):
+   - Prueba de scheduler: orden de activación y cobertura completa de agentes por paso.
+   - Prueba de inicialización: consistencia de medias y desviaciones con los parámetros teóricos.
+   - Prueba de conservación: decrecimiento monótono de agentes activos conforme llegan a destino.
 
-## Contenido desarrollado en simulacion_sir.html
-1. Simulador interactivo del modelo SIR:
-   - Control deslizante para $R_0$.
-   - Control deslizante para el período infeccioso $1/\gamma$.
-   - Control deslizante para la fracción inicial infectada $I(0)/N$.
+5. Análisis estadístico de la política (Task 2):
+   - Función `run_simulation(policy_active, seed)` para correr el modelo de forma reproducible.
+   - 100 corridas por escenario (con y sin política), con semillas emparejadas.
+   - Cálculo de media, desviación estándar, coeficiente de variación y número mínimo de corridas $M^*$.
+   - Estimación bootstrap ($B=2000$) de la media, su error estándar y el intervalo de confianza del 95%.
+   - Curva de convergencia del error estándar bootstrap en función del número de corridas.
+   - Estimación de la diferencia $\Delta Y$ entre escenarios y su intervalo de confianza.
 
-2. Visualización de resultados:
-   - Gráfica de susceptibles, infectados y recuperados a lo largo del tiempo.
-   - Línea de capacidad hospitalaria para contextualizar el pico de infectados.
-   - Métricas: valor actual de $R_0$, estado de crecimiento/extinción, umbral de inmunidad, pico máximo y tiempo al pico.
 
-3. Interpretación visual:
-   - Permite observar cómo cambian los resultados ante distintos supuestos epidemiológicos.
-   - Facilita la comprensión del impacto de la transmisión y la duración infecciosa en la propagación.
 
-## Cómo ejecutar Lab3.ipynb
-1. Abrir el archivo `Lab3.ipynb` en Jupyter Notebook o VS Code con soporte para notebooks.
-2. Asegurarse de tener instalado Python y las librerías necesarias, especialmente `numpy`.
+## Cómo ejecutar Lab4.ipynb
+1. Abrir el archivo `Lab4.ipynb` en Jupyter Notebook o VS Code con soporte para notebooks.
+2. Asegurarse de tener instalado Python y las librerías necesarias, especialmente `mesa==2.4.0`, `numpy` y `matplotlib`.
 3. Ejecutar las celdas en orden desde la primera hasta la última.
-4. Se imprimirán los resultados de la simulación base y del análisis de sensibilidad.
+4. Se imprimirán los resultados de las pruebas de verificación, el análisis estadístico y se mostrarán las gráficas correspondientes.
 
-## Cómo ejecutar simulacion_sir.html
-1. Ubicar el archivo `simulacion_sir.html` en la carpeta del proyecto.
-2. Abrirlo en un navegador web (Chrome, Edge, Firefox, etc.).
-3. Ajustar los controles deslizantes para observar cómo cambia la dinámica de la epidemia.
-4. La gráfica y las métricas se actualizan automáticamente en tiempo real.
+
 
 ## Requisitos
 - Python 3.x
 - Jupyter Notebook o VS Code con soporte de notebooks
-- Navegador web moderno para abrir `simulacion_sir.html`
-- Librería `numpy` para ejecutar el notebook
+- Librerías `mesa==2.4.0`, `numpy` y `matplotlib` para ejecutar el notebook
