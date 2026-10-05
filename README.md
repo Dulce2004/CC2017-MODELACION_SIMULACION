@@ -1,85 +1,129 @@
-# Hoja 5 — Redes y dinámica de contagio
+# Lab 5 — Modelado espacial y cobertura hospitalaria
 
 **Curso:** CC2017 - Modelación y Simulación
+**Notebook principal:** [`Lab 5.ipynb`](./Lab%205.ipynb)
 
-**Integrantes:**
-- Dulce Ambrosio - 231143
-- Javier Linares - 231135
-- Nadissa Vela - 23764
+## Integrantes
 
-## Descripción general
+- Dulce Ambrosio — 231143
+- Javier Linares — 231135
+- Nadissa Vela — 23764
 
-Este notebook implementa métricas de redes complejas y simula la propagación de una epidemia mediante el modelo SIR sobre diferentes topologías de red.
+## Descripción
 
-## Archivo principal
+El laboratorio analiza la cobertura y accesibilidad de servicios hospitalarios
+en California mediante datos espaciales reales. El notebook combina
+GeoPandas, análisis geométrico y redes viales de OpenStreetMap para comparar
+buffers circulares con isocronas basadas en tiempo de viaje.
 
-- `Hoja 5.ipynb` — notebook con la implementación de métricas, generación de redes y simulaciones SIR.
+El código contiene comentarios que relacionan cada etapa con los contenidos de
+las presentaciones **S12 - Redes P1** y **S13 - Redes P2**.
 
-## Contenido desarrollado
+## Datos utilizados
 
-### Task 1.3: Métricas de red
+Los archivos deben estar en la carpeta `data/`:
 
-Se implementan las siguientes funciones:
+- `hospitales_eeuu.geojson`: ubicación, tipo y capacidad de los hospitales.
+- `condados_eeuu.geojson`: límites y códigos de los condados.
+- `estados_eeuu.geojson`: límites estatales.
+- `poblacion_condados.csv`: población por condado.
 
-- `grado(A)`: calcula el grado de cada nodo.
-- `clustering(A)`: calcula el coeficiente de clustering local.
-- `distancia_promedio(A)`: calcula la distancia geodésica promedio mediante BFS.
+El análisis selecciona California mediante el código de estado FIPS `06` y
+utiliza el CRS `EPSG:3310` (NAD83 / California Albers) para realizar cálculos
+de distancias, áreas y buffers en metros.
 
-Las funciones se verifican utilizando una matriz de adyacencia definida en el notebook.
+## Contenido del laboratorio
 
-### Task 3.1: Generación y análisis de redes sintéticas
+### 1. Preparación y análisis base
 
-Se generan tres topologías utilizando NetworkX:
+- Carga y limpieza de archivos GeoJSON y CSV.
+- Estandarización de identificadores FIPS.
+- Filtrado de hospitales, condados y población de California.
+- Reproyección de las capas espaciales.
+- Mapa base con condados, hospitales y límite estatal.
 
-1. **Erdős-Rényi:** `N=500`, `p=0.02`.
-2. **Barabási-Albert:** `N=500`, `m=5`.
-3. **Watts-Strogatz:** `N=500`, `k=6`, `p=0.1`.
+### 2. Estadísticas hospitalarias por condado
 
-Para cada red se calculan:
+Se calculan y reportan:
 
-- Grado promedio `⟨k⟩`.
-- Segundo momento del grado `⟨k²⟩`.
-- Coeficiente de clustering promedio `⟨C⟩`.
-- Distancia promedio `⟨d⟩`.
-- Umbral epidémico crítico.
+- Número de hospitales.
+- Camas totales y camas UCI.
+- Población total.
+- Camas totales y camas UCI por cada 10,000 habitantes.
+- Distribuciones de camas hospitalarias.
 
-También se grafica la distribución de grado `P(k)` para cada topología.
+### 3. Análisis de cobertura mediante buffers
 
-### Task 3.2: Simulación SIR
+Se generan áreas de cobertura de **10 km, 25 km y 50 km** alrededor de los
+hospitales. Luego se calcula la población cubierta y se clasifican los
+condados según su cobertura espacial.
 
-Se simula la propagación de una epidemia sobre las tres redes con los siguientes parámetros:
+### 4. Distancia al hospital más cercano
 
-- Probabilidad de transmisión: `β = 0.04`.
-- Probabilidad de recuperación: `γ = 0.03`.
-- Infectados iniciales: `5`.
-- Número de realizaciones: `50`.
-- Tamaño de la red: `N = 500`.
+Se calcula la distancia desde el centroide de cada condado hasta el hospital
+más cercano y se construye una curva de cobertura acumulada. Esta aproximación
+permite evaluar la sensibilidad de los resultados frente al uso de buffers
+circulares.
 
-Se reportan:
+### 5. Índice compuesto de vulnerabilidad
 
-- Tamaño final promedio del brote.
-- Intervalo de confianza del 95%.
-- Trayectorias de la fracción de infectados `I(t)/N`.
-- Comparación visual entre las distintas topologías.
+Se combinan tres componentes normalizados:
 
-## Cómo ejecutar el notebook
+1. Distancia mínima al hospital.
+2. Escasez de camas hospitalarias per cápita.
+3. Ocupación hospitalaria promedio en un radio de 50 km.
 
-1. Abrir `Hoja 5.ipynb` en Jupyter Notebook o Visual Studio Code.
-2. Instalar las dependencias requeridas.
-3. Ejecutar las celdas en orden.
-4. Revisar las métricas, tablas y gráficas generadas.
+El índice permite identificar los condados con mayor vulnerabilidad relativa.
+
+### 6. Localización de cobertura máxima (MCLP)
+
+Se implementa un algoritmo voraz para proponer la ubicación de tres nuevos
+hospitales entre puntos candidatos separados por 50 km. El objetivo es
+maximizar la población adicional cubierta dentro del radio definido.
+
+### 7. Isocronas con OSMnx
+
+Para los condados más vulnerables se descarga la red vial de OpenStreetMap y
+se calculan isocronas de tiempo de viaje alrededor de hospitales. El análisis
+compara:
+
+- Cobertura geométrica mediante buffers.
+- Cobertura basada en la red vial y el tiempo de viaje.
+
+La descarga de la red requiere conexión a Internet y puede depender de la
+disponibilidad temporal de los servicios de OpenStreetMap/Overpass.
 
 ## Requisitos
 
 - Python 3.x
 - Jupyter Notebook o Visual Studio Code
-- NumPy
+- GeoPandas
 - Pandas
+- NumPy
 - Matplotlib
+- Shapely
 - NetworkX
+- OSMnx
+- Matplotlib Scalebar
+- Mapclassify
 
-Para instalar las librerías:
+Instalación:
 
+```bash
+pip install geopandas pandas numpy matplotlib shapely networkx osmnx matplotlib-scalebar mapclassify jupyter
 ```
-pip install numpy pandas matplotlib networkx jupyter
+
+En un notebook de Jupyter o VS Code también puede utilizarse:
+
+```python
+%pip install geopandas pandas numpy matplotlib shapely networkx osmnx matplotlib-scalebar mapclassify
 ```
+
+## Ejecución
+
+1. Verificar que los cuatro archivos de datos estén en `data/`.
+2. Abrir [`Lab 5.ipynb`](./Lab%205.ipynb) en Jupyter o Visual Studio Code.
+3. Seleccionar el entorno de Python donde se instalaron las dependencias.
+4. Ejecutar las celdas en orden.
+5. Revisar las tablas, mapas, métricas de cobertura, índice de vulnerabilidad,
+   ubicaciones candidatas e isocronas generadas.
