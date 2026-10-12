@@ -1,129 +1,211 @@
-# Lab 5 — Modelado espacial y cobertura hospitalaria
+# Hoja 6 — Espacio de estados, equilibrios y estabilidad
 
-**Curso:** CC2017 - Modelación y Simulación
-**Notebook principal:** [`Lab 5.ipynb`](./Lab%205.ipynb)
-
-## Integrantes
-
-- Dulce Ambrosio — 231143
-- Javier Linares — 231135
-- Nadissa Vela — 23764
+**Curso:** CC2017 - Modelación y Simulación  
+**Notebook principal:** [`Hoja 6.ipynb`](./Hoja%206.ipynb)
 
 ## Descripción
 
-El laboratorio analiza la cobertura y accesibilidad de servicios hospitalarios
-en California mediante datos espaciales reales. El notebook combina
-GeoPandas, análisis geométrico y redes viales de OpenStreetMap para comparar
-buffers circulares con isocronas basadas en tiempo de viaje.
+Esta hoja estudia un sistema dinámico no lineal de competencia entre dos
+plataformas. El modelo representa la evolución de los usuarios de las
+plataformas A y B mediante las variables de estado `x` y `y`:
 
-El código contiene comentarios que relacionan cada etapa con los contenidos de
-las presentaciones **S12 - Redes P1** y **S13 - Redes P2**.
+```text
+dx/dt = r1*x*(1 - x - alpha12*y)
+dy/dt = r2*y*(1 - y - alpha21*x)
+```
 
-## Datos utilizados
+El trabajo conecta el análisis matemático del espacio de estados con
+simulaciones numéricas. Se calculan equilibrios, se determina su estabilidad
+mediante la matriz jacobiana y sus valores propios, y se comprueban las
+predicciones con trayectorias generadas desde diferentes condiciones iniciales.
 
-Los archivos deben estar en la carpeta `data/`:
+El notebook contiene comentarios que relacionan cada sección del código con
+los contenidos de la presentación sobre trayectorias, equilibrios y
+estabilidad.
 
-- `hospitales_eeuu.geojson`: ubicación, tipo y capacidad de los hospitales.
-- `condados_eeuu.geojson`: límites y códigos de los condados.
-- `estados_eeuu.geojson`: límites estatales.
-- `poblacion_condados.csv`: población por condado.
+## Parámetros del modelo
 
-El análisis selecciona California mediante el código de estado FIPS `06` y
-utiliza el CRS `EPSG:3310` (NAD83 / California Albers) para realizar cálculos
-de distancias, áreas y buffers en metros.
+Para el Grupo 1 se utilizan:
 
-## Contenido del laboratorio
+- `r1 = 1.0`: tasa de crecimiento de la plataforma A.
+- `r2 = 0.5`: tasa de crecimiento de la plataforma B.
+- `alpha12 = 0.5`: efecto de B sobre A.
+- `alpha21 = 0.6`: efecto de A sobre B.
 
-### 1. Preparación y análisis base
+Los equilibrios analizados son:
 
-- Carga y limpieza de archivos GeoJSON y CSV.
-- Estandarización de identificadores FIPS.
-- Filtrado de hospitales, condados y población de California.
-- Reproyección de las capas espaciales.
-- Mapa base con condados, hospitales y límite estatal.
+- `E1 = (0, 0)`: ausencia de usuarios en ambas plataformas.
+- `E2 = (0, 1)`: exclusión de A.
+- `E3 = (1, 0)`: exclusión de B.
+- `E4 = (5/7, 4/7)`: equilibrio interior de coexistencia.
 
-### 2. Estadísticas hospitalarias por condado
+## Contenido de la hoja
 
-Se calculan y reportan:
+### 1. Cálculo de equilibrios
 
-- Número de hospitales.
-- Camas totales y camas UCI.
-- Población total.
-- Camas totales y camas UCI por cada 10,000 habitantes.
-- Distribuciones de camas hospitalarias.
+Se calculan los parámetros del grupo y las coordenadas de los cuatro
+equilibrios del sistema. También se verifica la factibilidad biológica del
+equilibrio interior, comprobando que sus coordenadas sean positivas.
 
-### 3. Análisis de cobertura mediante buffers
+### 2. Jacobiana y clasificación de equilibrios
 
-Se generan áreas de cobertura de **10 km, 25 km y 50 km** alrededor de los
-hospitales. Luego se calcula la población cubierta y se clasifican los
-condados según su cobertura espacial.
+Para cada equilibrio se evalúa la matriz jacobiana:
 
-### 4. Distancia al hospital más cercano
+```text
+J(x, y) = [ df1/dx  df1/dy ]
+          [ df2/dx  df2/dy ]
+```
 
-Se calcula la distancia desde el centroide de cada condado hasta el hospital
-más cercano y se construye una curva de cobertura acumulada. Esta aproximación
-permite evaluar la sensibilidad de los resultados frente al uso de buffers
-circulares.
+Con la traza, el determinante, el discriminante y los valores propios se
+clasifica cada equilibrio como:
 
-### 5. Índice compuesto de vulnerabilidad
+- Nodo estable.
+- Nodo inestable.
+- Punto silla.
+- Foco estable o inestable.
+- Centro.
+- Caso frontera cuando el determinante es cero.
 
-Se combinan tres componentes normalizados:
+También se construye el plano traza-determinante, incluyendo la curva
+`tau^2 = 4*Delta` que separa nodos y focos.
 
-1. Distancia mínima al hospital.
-2. Escasez de camas hospitalarias per cápita.
-3. Ocupación hospitalaria promedio en un radio de 50 km.
+### 3. Predicción de convergencia
 
-El índice permite identificar los condados con mayor vulnerabilidad relativa.
+Se definen cuatro estados iniciales:
 
-### 6. Localización de cobertura máxima (MCLP)
+- `P1 = (0.05, 0.05)`.
+- `P2 = (0.80, 0.30)`.
+- `P3 = (0.30, 0.80)`.
+- `P4 = (0.60, 0.60)`.
 
-Se implementa un algoritmo voraz para proponer la ubicación de tres nuevos
-hospitales entre puntos candidatos separados por 50 km. El objetivo es
-maximizar la población adicional cubierta dentro del radio definido.
+Para cada uno se estudia hacia cuál equilibrio converge la trayectoria del
+sistema.
 
-### 7. Isocronas con OSMnx
+### 4. Integradores Euler y Runge-Kutta
 
-Para los condados más vulnerables se descarga la red vial de OpenStreetMap y
-se calculan isocronas de tiempo de viaje alrededor de hospitales. El análisis
-compara:
+Se implementan desde cero los métodos de:
 
-- Cobertura geométrica mediante buffers.
-- Cobertura basada en la red vial y el tiempo de viaje.
+- Euler.
+- Runge-Kutta de cuarto orden (RK4).
 
-La descarga de la red requiere conexión a Internet y puede depender de la
-disponibilidad temporal de los servicios de OpenStreetMap/Overpass.
+Los resultados se comparan con una solución de referencia calculada mediante
+`solve_ivp` con el método `DOP853`. Se mide el error global para distintos
+tamaños de paso y se grafica el error en escala log-log para estimar el orden
+de convergencia de cada integrador.
+
+### 5. Retrato de fases
+
+Se construye un retrato de fases en el cuadrante
+`[0, 1.5] x [0, 1.5]`, incluyendo:
+
+- Campo vectorial normalizado.
+- Nulclinas de `x` y `y`.
+- Equilibrios del sistema.
+- Más de doce trayectorias desde distintos estados iniciales.
+- Trayectorias destacadas de `P1`, `P2`, `P3` y `P4`.
+
+Esta visualización permite comparar el comportamiento observado con la
+clasificación de estabilidad obtenida mediante la jacobiana.
+
+### 6. Cuencas de atracción
+
+Se simula una malla de `60 x 60` estados iniciales. Cada punto se clasifica
+según el equilibrio al que converge después de la integración con RK4.
+
+El resultado es un mapa de cuencas de atracción que muestra qué regiones del
+espacio de estados conducen a cada equilibrio y permite calcular la fracción
+del dominio que pertenece a la cuenca del equilibrio interior `E4`.
+
+### 7. Perturbaciones y estabilidad numérica
+
+Se aplican perturbaciones pequeñas en ocho direcciones alrededor de `E4`.
+Las tasas de decaimiento observadas se comparan con las tasas predichas por
+los valores propios de la jacobiana.
+
+Además, se utiliza una búsqueda por bisección para estimar el paso máximo
+`h_max` con el que Euler conserva la convergencia. Esto permite observar que un
+paso demasiado grande puede producir inestabilidad numérica aunque el
+equilibrio del sistema continuo sea estable.
+
+### 8. Cambio de régimen por rivalidad
+
+Se modifica el parámetro `alpha21` para comparar:
+
+- Un régimen de coexistencia.
+- Un régimen de exclusión de la plataforma B.
+
+El análisis muestra cómo una variación de la rivalidad puede cambiar
+cualitativamente el destino del sistema mediante una bifurcación transcrítica.
+
+### 9. Histéresis en un modelo de lago
+
+Se estudia un modelo escalar de concentración de nutrientes:
+
+```text
+dx/dt = a - b*x + x^2/(x^2 + 1)
+```
+
+Se encuentran numéricamente los puntos donde `g'(x) = 0`, se identifican las
+cargas críticas de colapso y recuperación, y se construye el diagrama de
+equilibrios con forma de S.
+
+Las simulaciones deterministas aumentan y disminuyen lentamente la carga
+externa para mostrar:
+
+- Estado estable de aguas claras.
+- Estado estable de aguas turbias.
+- Rama inestable entre ambos estados.
+- Colapso.
+- Recuperación.
+- Histéresis, donde el camino de regreso no coincide con el camino de caída.
+
+### 10. Simulación estocástica y alertas tempranas
+
+Se utiliza Euler-Maruyama para agregar ruido al modelo del lago mientras la
+carga de nutrientes aumenta gradualmente. Se calculan indicadores de alerta
+temprana mediante:
+
+- Varianza móvil.
+- Autocorrelación de retardo uno.
+- Detrendización mediante media móvil.
+
+Finalmente se realizan 100 simulaciones en dos escenarios:
+
+1. Carga dinámica que se acerca al umbral de colapso.
+2. Carga estática utilizada como control para medir falsas alarmas.
+
+La prueba de tendencia se realiza mediante el tau de Kendall para evaluar si
+la varianza y la autocorrelación aumentan significativamente antes del cambio
+de régimen.
 
 ## Requisitos
 
-- Python 3.x
-- Jupyter Notebook o Visual Studio Code
-- GeoPandas
-- Pandas
-- NumPy
-- Matplotlib
-- Shapely
-- NetworkX
-- OSMnx
-- Matplotlib Scalebar
-- Mapclassify
+- Python 3.x.
+- Jupyter Notebook o Visual Studio Code con soporte para notebooks.
+- NumPy.
+- SciPy.
+- Matplotlib.
+- Pandas.
 
 Instalación:
 
 ```bash
-pip install geopandas pandas numpy matplotlib shapely networkx osmnx matplotlib-scalebar mapclassify jupyter
+pip install numpy scipy matplotlib pandas jupyter
 ```
 
-En un notebook de Jupyter o VS Code también puede utilizarse:
+En una celda de Jupyter también puede utilizarse:
 
 ```python
-%pip install geopandas pandas numpy matplotlib shapely networkx osmnx matplotlib-scalebar mapclassify
+%pip install numpy scipy matplotlib pandas
 ```
 
 ## Ejecución
 
-1. Verificar que los cuatro archivos de datos estén en `data/`.
-2. Abrir [`Lab 5.ipynb`](./Lab%205.ipynb) en Jupyter o Visual Studio Code.
-3. Seleccionar el entorno de Python donde se instalaron las dependencias.
-4. Ejecutar las celdas en orden.
-5. Revisar las tablas, mapas, métricas de cobertura, índice de vulnerabilidad,
-   ubicaciones candidatas e isocronas generadas.
+1. Abrir [`Hoja 6.ipynb`](./Hoja%206.ipynb) en Jupyter o Visual Studio Code.
+2. Seleccionar un entorno de Python con las dependencias instaladas.
+3. Ejecutar las celdas en orden.
+4. Revisar los valores de los equilibrios, las clasificaciones de estabilidad
+   y los errores de los integradores.
+5. Analizar los retratos de fase, el plano traza-determinante y las cuencas
+   de atracción.
+6. Revisar las gráficas de bifurcación, histéresis y alertas tempranas.
