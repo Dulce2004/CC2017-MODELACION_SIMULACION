@@ -1,211 +1,143 @@
-# Hoja 6 — Espacio de estados, equilibrios y estabilidad
+# Lab 6 — Modelado híbrido y sincronización
 
 **Curso:** CC2017 - Modelación y Simulación  
-**Notebook principal:** [`Hoja 6.ipynb`](./Hoja%206.ipynb)
+**Notebook:** [`Lab 6.ipynb`](./Lab%206.ipynb)
 
 ## Descripción
 
-Esta hoja estudia un sistema dinámico no lineal de competencia entre dos
-plataformas. El modelo representa la evolución de los usuarios de las
-plataformas A y B mediante las variables de estado `x` y `y`:
+Este laboratorio implementa y verifica un modelo híbrido que combina:
+
+- **System Dynamics (SD):** evolución diaria de los usuarios activos de una
+  plataforma de video.
+- **Discrete Event Simulation (DES):** llegadas, colas, servicios, latencias y
+  rechazos de solicitudes en un conjunto de servidores.
+- **Política de autoescalado:** incorporación de servidores cuando la
+  utilización prevista supera un umbral.
+
+El notebook relaciona la implementación con las presentaciones:
+
+- **S15 - DES e Hbridos P1:** entidades, colas, recursos, procesos de llegada y
+  servicio, teoría M/M/c, ley de Little y verificación de simulaciones.
+- **S16 - DES e Hbridos P2:** modelado híbrido, retroalimentación, interfaces
+  entre tasas y entidades, sincronización de relojes y ventanas de
+  intercambio.
+
+## Contenido del notebook
+
+### Task 1.3 — Línea base del modelo híbrido
+
+Se implementa una primera versión del modelo acoplado:
+
+- La capa DES simula una cola M/M/c/K durante ventanas de tiempo en segundos.
+- La tasa de llegada depende del número de usuarios activos:
+  `lambda = a * U`.
+- La latencia promedio `W` y la fracción de rechazo `r` alimentan la capa SD.
+- La capa SD actualiza los usuarios mediante una ecuación diferencial
+  discretizada con Euler.
+- Se solicitan dos servidores cuando la utilización prevista supera
+  `theta = 0.7`; los servidores llegan después de un retardo `D = 3` días.
+
+### Task 2.1 — Verificación aislada de la capa DES
+
+Se verifica el simulador de eventos discretos bajo diferentes condiciones:
+
+1. Cola M/M/4 estable, con comparación de `W`, `Wq` y `rho` contra la teoría.
+2. Cola M/M/c/K sobrecargada, con medición de la fracción rechazada.
+3. Ley de Little, comparando el número promedio de entidades medido
+   directamente con `L = lambda_efectiva * W`.
+
+Se utilizan réplicas independientes, periodo de calentamiento e intervalos
+de confianza para evaluar los resultados de la simulación.
+
+### Task 2.2 — Verificación aislada de la capa SD
+
+Se estudia la ecuación diferencial de usuarios activos con abandono constante:
 
 ```text
-dx/dt = r1*x*(1 - x - alpha12*y)
-dy/dt = r2*y*(1 - y - alpha21*x)
+dU/dt = (p + q * (U/M)) * (M - U) - delta_0 * U
 ```
 
-El trabajo conecta el análisis matemático del espacio de estados con
-simulaciones numéricas. Se calculan equilibrios, se determina su estabilidad
-mediante la matriz jacobiana y sus valores propios, y se comprueban las
-predicciones con trayectorias generadas desde diferentes condiciones iniciales.
+La implementación compara:
 
-El notebook contiene comentarios que relacionan cada sección del código con
-los contenidos de la presentación sobre trayectorias, equilibrios y
-estabilidad.
+- Método de Euler.
+- Método de Runge-Kutta de cuarto orden (RK4).
+- Solución de referencia de `scipy.integrate.solve_ivp`.
 
-## Parámetros del modelo
+También se analiza cómo disminuye el error al reducir el paso temporal y se
+selecciona un paso adecuado para el acoplamiento con DES.
 
-Para el Grupo 1 se utilizan:
+### Task 2.3 — Eventos de estado y política de autoescalado
 
-- `r1 = 1.0`: tasa de crecimiento de la plataforma A.
-- `r2 = 0.5`: tasa de crecimiento de la plataforma B.
-- `alpha12 = 0.5`: efecto de B sobre A.
-- `alpha21 = 0.6`: efecto de A sobre B.
+Se compara una detección ingenua de eventos con una detección más precisa:
 
-Los equilibrios analizados son:
+- Cruce del umbral de utilización prevista.
+- Búsqueda del instante del evento mediante bisección.
+- Programación de la llegada de servidores después del retardo `D`.
+- Reordenamiento de la política cuando llegan nuevos servidores.
 
-- `E1 = (0, 0)`: ausencia de usuarios en ambas plataformas.
-- `E2 = (0, 1)`: exclusión de A.
-- `E3 = (1, 0)`: exclusión de B.
-- `E4 = (5/7, 4/7)`: equilibrio interior de coexistencia.
+El objetivo es sincronizar correctamente los eventos discretos con la
+evolución continua de la capa SD.
 
-## Contenido de la hoja
+### Task 2.4 — Verificación de la interfaz entre capas
 
-### 1. Cálculo de equilibrios
+Se valida la comunicación entre SD y DES mediante:
 
-Se calculan los parámetros del grupo y las coordenadas de los cuatro
-equilibrios del sistema. También se verifica la factibilidad biológica del
-equilibrio interior, comprobando que sus coordenadas sean positivas.
-
-### 2. Jacobiana y clasificación de equilibrios
-
-Para cada equilibrio se evalúa la matriz jacobiana:
+- Verificación estadística de llegadas Poisson.
+- Conservación de entidades en cada ventana de simulación.
+- Balance:
 
 ```text
-J(x, y) = [ df1/dx  df1/dy ]
-          [ df2/dx  df2/dy ]
+llegadas = terminadas + entidades_en_sistema + rechazadas
 ```
 
-Con la traza, el determinante, el discriminante y los valores propios se
-clasifica cada equilibrio como:
+Esta comprobación garantiza que las solicitudes no desaparezcan durante el
+acoplamiento.
 
-- Nodo estable.
-- Nodo inestable.
-- Punto silla.
-- Foco estable o inestable.
-- Centro.
-- Caso frontera cuando el determinante es cero.
+### Task 3.1 — Dependencia del tamaño de la ventana de intercambio
 
-También se construye el plano traza-determinante, incluyendo la curva
-`tau^2 = 4*Delta` que separa nodos y focos.
-
-### 3. Predicción de convergencia
-
-Se definen cuatro estados iniciales:
-
-- `P1 = (0.05, 0.05)`.
-- `P2 = (0.80, 0.30)`.
-- `P3 = (0.30, 0.80)`.
-- `P4 = (0.60, 0.60)`.
-
-Para cada uno se estudia hacia cuál equilibrio converge la trayectoria del
-sistema.
-
-### 4. Integradores Euler y Runge-Kutta
-
-Se implementan desde cero los métodos de:
-
-- Euler.
-- Runge-Kutta de cuarto orden (RK4).
-
-Los resultados se comparan con una solución de referencia calculada mediante
-`solve_ivp` con el método `DOP853`. Se mide el error global para distintos
-tamaños de paso y se grafica el error en escala log-log para estimar el orden
-de convergencia de cada integrador.
-
-### 5. Retrato de fases
-
-Se construye un retrato de fases en el cuadrante
-`[0, 1.5] x [0, 1.5]`, incluyendo:
-
-- Campo vectorial normalizado.
-- Nulclinas de `x` y `y`.
-- Equilibrios del sistema.
-- Más de doce trayectorias desde distintos estados iniciales.
-- Trayectorias destacadas de `P1`, `P2`, `P3` y `P4`.
-
-Esta visualización permite comparar el comportamiento observado con la
-clasificación de estabilidad obtenida mediante la jacobiana.
-
-### 6. Cuencas de atracción
-
-Se simula una malla de `60 x 60` estados iniciales. Cada punto se clasifica
-según el equilibrio al que converge después de la integración con RK4.
-
-El resultado es un mapa de cuencas de atracción que muestra qué regiones del
-espacio de estados conducen a cada equilibrio y permite calcular la fracción
-del dominio que pertenece a la cuenca del equilibrio interior `E4`.
-
-### 7. Perturbaciones y estabilidad numérica
-
-Se aplican perturbaciones pequeñas en ocho direcciones alrededor de `E4`.
-Las tasas de decaimiento observadas se comparan con las tasas predichas por
-los valores propios de la jacobiana.
-
-Además, se utiliza una búsqueda por bisección para estimar el paso máximo
-`h_max` con el que Euler conserva la convergencia. Esto permite observar que un
-paso demasiado grande puede producir inestabilidad numérica aunque el
-equilibrio del sistema continuo sea estable.
-
-### 8. Cambio de régimen por rivalidad
-
-Se modifica el parámetro `alpha21` para comparar:
-
-- Un régimen de coexistencia.
-- Un régimen de exclusión de la plataforma B.
-
-El análisis muestra cómo una variación de la rivalidad puede cambiar
-cualitativamente el destino del sistema mediante una bifurcación transcrítica.
-
-### 9. Histéresis en un modelo de lago
-
-Se estudia un modelo escalar de concentración de nutrientes:
+Se evalúan diferentes tamaños de ventana `H`:
 
 ```text
-dx/dt = a - b*x + x^2/(x^2 + 1)
+H = [0.25, 0.5, 1, 2, 4, 7] días
 ```
 
-Se encuentran numéricamente los puntos donde `g'(x) = 0`, se identifican las
-cargas críticas de colapso y recuperación, y se construye el diagrama de
-equilibrios con forma de S.
+Para cada valor se ejecutan réplicas del modelo híbrido y se calculan:
 
-Las simulaciones deterministas aumentan y disminuyen lentamente la carga
-externa para mostrar:
+- Usuarios finales `U(100)`.
+- Latencia máxima.
+- Error cuadrático medio (RMSE) de la trayectoria de usuarios.
+- Intervalos de confianza de las métricas.
 
-- Estado estable de aguas claras.
-- Estado estable de aguas turbias.
-- Rama inestable entre ambos estados.
-- Colapso.
-- Recuperación.
-- Histéresis, donde el camino de regreso no coincide con el camino de caída.
-
-### 10. Simulación estocástica y alertas tempranas
-
-Se utiliza Euler-Maruyama para agregar ruido al modelo del lago mientras la
-carga de nutrientes aumenta gradualmente. Se calculan indicadores de alerta
-temprana mediante:
-
-- Varianza móvil.
-- Autocorrelación de retardo uno.
-- Detrendización mediante media móvil.
-
-Finalmente se realizan 100 simulaciones en dos escenarios:
-
-1. Carga dinámica que se acerca al umbral de colapso.
-2. Carga estática utilizada como control para medir falsas alarmas.
-
-La prueba de tendencia se realiza mediante el tau de Kendall para evaluar si
-la varianza y la autocorrelación aumentan significativamente antes del cambio
-de régimen.
+El caso `H = 0.25` se utiliza como referencia para estudiar el efecto de la
+frecuencia de sincronización. Una ventana pequeña suele representar mejor el
+acoplamiento, pero requiere más intercambios y tiempo de ejecución.
 
 ## Requisitos
 
 - Python 3.x.
 - Jupyter Notebook o Visual Studio Code con soporte para notebooks.
 - NumPy.
+- SimPy.
 - SciPy.
 - Matplotlib.
-- Pandas.
 
-Instalación:
+Las librerías pueden instalarse con:
 
 ```bash
-pip install numpy scipy matplotlib pandas jupyter
-```
-
-En una celda de Jupyter también puede utilizarse:
-
-```python
-%pip install numpy scipy matplotlib pandas
+pip install numpy simpy scipy matplotlib jupyter
 ```
 
 ## Ejecución
 
-1. Abrir [`Hoja 6.ipynb`](./Hoja%206.ipynb) en Jupyter o Visual Studio Code.
+1. Abrir [`Lab 6.ipynb`](./Lab%206.ipynb) en Jupyter o Visual Studio Code.
 2. Seleccionar un entorno de Python con las dependencias instaladas.
 3. Ejecutar las celdas en orden.
-4. Revisar los valores de los equilibrios, las clasificaciones de estabilidad
-   y los errores de los integradores.
-5. Analizar los retratos de fase, el plano traza-determinante y las cuencas
-   de atracción.
-6. Revisar las gráficas de bifurcación, histéresis y alertas tempranas.
+4. Revisar las comparaciones entre teoría y simulación de la capa DES.
+5. Analizar los errores de Euler y RK4 en la capa SD.
+6. Comparar la detección de eventos y la política de autoescalado.
+7. Revisar la conservación de entidades en la interfaz SD-DES.
+8. Analizar el efecto del tamaño de ventana `H` mediante la tabla de
+   resultados y la gráfica RMSE.
+
+> La ejecución de `Task 3.1` puede tardar varios minutos porque ejecuta
+> múltiples réplicas del modelo híbrido para cada tamaño de ventana.
